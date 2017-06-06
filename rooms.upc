@@ -3,12 +3,11 @@
 #include <math.h>
 #include <upc_relaxed.h>
 
-#define N 20
-
-shared float dislikes[N * N];
-shared float initial_cost[THREADS];
-shared float cost[THREADS];
-shared int assignment[THREADS * N];
+shared int N;
+shared float* dislikes = 0;
+shared float* initial_cost = 0;
+shared float* cost = 0;
+shared int* assignment = 0;
 
 float rand_interval_float(float max) {
 	return ((float) rand() / (float) RAND_MAX) * max;
@@ -42,10 +41,23 @@ float calculate_cost(int t) {
 	return result;
 }
 
-int main() {
+int main(int argc, char * argv[]) {
 	srand(time(0) * (MYTHREAD + 1));
 
-	shared float* dislikes = (float*)upc_all_alloc()
+	if (MYTHREAD == 0) {
+		int M = 10;
+		sscanf(argv[1], "%d", &M);
+		N = M * 2;
+		printf("Number of rooms: %d\n", M);
+	}
+
+	// wait for initialization of N
+	upc_barrier;
+
+	dislikes = (shared float*) upc_all_alloc(1, N * N * sizeof(float));
+	initial_cost = (shared float*) upc_all_alloc(THREADS, sizeof(float));
+	cost = (shared float*) upc_all_alloc(THREADS, sizeof(float));
+	assignment = (shared int*) upc_all_alloc(THREADS, N * sizeof(int));
 
 	// generate dislikes
 	if (MYTHREAD == 0) {
@@ -56,24 +68,16 @@ int main() {
 			}
 		}
 
-//		for (int i = 0; i < N; ++i) {
-//			for (int j = 0; j <= i; ++j) {
-//				printf("%.2f  ", dislikes[N * i + j]);
-//			}
-//			printf("\n");
-//		}
-	}
-
-	// prevent other threads from proceeding if dislikes are not yet generated
-	upc_barrier;
-
-	sleep(MYTHREAD);
-	for (int i = 0; i < N; ++i) {
-		for (int j = 0; j <= i; ++j) {
-			printf("%.2f  ", dislikes[N * i + j]);
+		for (int i = 0; i < N; ++i) {
+			for (int j = 0; j <= i; ++j) {
+				printf("%.2f  ", dislikes[N * i + j]);
+			}
+			printf("\n");
 		}
-		printf("\n");
 	}
+
+	// wait for initialization of dislikes
+	upc_barrier;
 
 	// generate initial random solution
 	for (int i = 0; i < N; ++i) {
@@ -84,14 +88,7 @@ int main() {
 		swap(&assignment[N * MYTHREAD + i], &assignment[N * MYTHREAD + j]);
 	}
 
-//	printf("%%%%%%%%%%%%%%%%%%%%%%%\n");
-//	for (int i = 0; i < N / 2; ++i) {
-//		printf("[%d], %-3d %-3d\n", MYTHREAD, assignment[MYTHREAD][i][0],
-//				assignment[MYTHREAD][i][1]);
-//	}
-//	printf("%%%%%%%%%%%%%%%%%%%%%%%\n");
-
-// calculate initial cost
+	// calculate initial cost
 	cost[MYTHREAD] = calculate_cost(MYTHREAD);
 	initial_cost[MYTHREAD] = cost[MYTHREAD];
 
