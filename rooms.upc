@@ -48,7 +48,7 @@ int main(int argc, char * argv[]) {
 		int M = 10;
 		sscanf(argv[1], "%d", &M);
 		N = M * 2;
-		printf("Number of rooms: %d\n", M);
+		printf("Number of rooms: %d\n\n", M);
 	}
 
 	// wait for initialization of N
@@ -61,6 +61,7 @@ int main(int argc, char * argv[]) {
 
 	// generate dislikes
 	if (MYTHREAD == 0) {
+		printf("Dislike matrix\n");
 		for (int i = 0; i < N; ++i) {
 			for (int j = 0; j < N; ++j) {
 				dislikes[N * i + j] = rand_interval_float(10.0f);
@@ -74,6 +75,7 @@ int main(int argc, char * argv[]) {
 			}
 			printf("\n");
 		}
+		printf("\n");
 	}
 
 	// wait for initialization of dislikes
@@ -128,14 +130,16 @@ int main(int argc, char * argv[]) {
 		}
 
 		// print gains from all threads
+		printf("Gain per thread\n");
 		for (int i = 0; i < THREADS; ++i) {
-			printf("[%d] %f -> %f\n", i, initial_cost[i], cost[i]);
+			printf("%-3d| %f -> %f\n", i, initial_cost[i], cost[i]);
 		}
+		printf("\n");
 
 		// printf winner assignment
-		printf("winner: %d\n", winner);
+		printf("Winner: %d\n", winner);
 		for (int i = 0; i < N / 2; ++i) {
-			printf("%-3d %-3d\n", assignment[N * winner + 2 * i],
+			printf("room %-3d| %-3d %-3d\n", i, assignment[N * winner + 2 * i],
 					assignment[N * winner + 2 * i + 1]);
 		}
 		printf("\n");
